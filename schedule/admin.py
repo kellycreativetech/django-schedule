@@ -2,7 +2,7 @@ from django.contrib import admin
 from schedule.forms import RuleForm
 from django.db import models
 
-from schedule.models import Calendar, Event, Rule
+from schedule.models import Calendar, Event, CalendarRelation, Rule
 from schedule.widgets import JqSplitDateTimeWidget
 from schedule.fields import JqSplitDateTimeField
 
@@ -20,4 +20,5 @@ class EventAdmin(admin.ModelAdmin):
 
 admin.site.register(Calendar, CalendarAdminOptions)
 admin.site.register(Rule, RuleAdmin)
+admin.site.register(CalendarRelation)
 admin.site.register(Event, EventAdmin)
