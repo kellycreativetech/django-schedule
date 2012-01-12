@@ -3,8 +3,8 @@ from schedule.forms import RuleForm
 from django.db import models
 
 from schedule.models import Calendar, Event, Rule
-from utils.widgets import JqSplitDateTimeWidget
-from utils.fields import JqSplitDateTimeField
+from schedule.widgets import JqSplitDateTimeWidget
+from schedule.fields import JqSplitDateTimeField
 
 class CalendarAdminOptions(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
