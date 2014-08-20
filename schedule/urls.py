@@ -47,68 +47,43 @@ url(r'^calendar/daily/(?P<calendar_slug>[-\w]+)/$',
     name = "day_calendar",
     kwargs={'periods': [Day], 'template_name': 'schedule/calendar_day.html'}),
 
-url(r'^calendar/year/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name="year_calendar",
-    kwargs={'periods': [Year], 'template_name': 'schedule/calendar_year.html'}),
-
-url(r'^calendar/tri_month/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name="tri_month_calendar",
-    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_tri_month.html'}),
-
-url(r'^calendar/compact_month/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name = "compact_calendar",
-    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_compact_month.html'}),
-
-url(r'^calendar/month/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name = "month_calendar",
-    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_month.html'}),
-
-url(r'^calendar/week/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name = "week_calendar",
-    kwargs={'periods': [Week], 'template_name': 'schedule/calendar_week.html'}),
-
-url(r'^calendar/daily/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name = "day_calendar",
-    kwargs={'periods': [Day], 'template_name': 'schedule/calendar_day.html'}),
-
-#---- All events
+#---- All events, no calendar slug
 
 url(r'^calendar/year/$',
     'schedule.views.calendar_by_periods',
     name="year_calendar",
-    kwargs={'periods': [Year], 'template_name': 'schedule/calendar_year.html'}),
+    kwargs={'periods': [Year], 'template_name': 'schedule/calendar_year.html', 'calendar_slug': ''}),
 
 url(r'^calendar/tri_month/$',
     'schedule.views.calendar_by_periods',
     name="tri_month_calendar",
-    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_tri_month.html'}),
+    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_tri_month.html', 'calendar_slug': ''}),
 
 url(r'^calendar/compact_month/$',
     'schedule.views.calendar_by_periods',
     name = "compact_calendar",
-    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_compact_month.html'}),
+    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_compact_month.html', 'calendar_slug': ''}),
 
 url(r'^calendar/month/$',
     'schedule.views.calendar_by_periods',
     name = "month_calendar",
-    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_month.html'}),
+    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_month.html', 'calendar_slug': ''}),
 
 url(r'^calendar/week/$',
     'schedule.views.calendar_by_periods',
     name = "week_calendar",
-    kwargs={'periods': [Week], 'template_name': 'schedule/calendar_week.html'}),
+    kwargs={'periods': [Week], 'template_name': 'schedule/calendar_week.html', 'calendar_slug': ''}),
 
 url(r'^calendar/daily/$',
     'schedule.views.calendar_by_periods',
     name = "day_calendar",
-    kwargs={'periods': [Day], 'template_name': 'schedule/calendar_day.html'}),
+    kwargs={'periods': [Day], 'template_name': 'schedule/calendar_day.html', 'calendar_slug': ''}),
 
+## Special case day view url... for reversing from template
+url(r'^calendar/daily/(?P<calendar_slug>[-\w]*)$',
+    'schedule.views.calendar_by_periods',
+    name = "day_calendar",
+    kwargs={'periods': [Day], 'template_name': 'schedule/calendar_day.html', 'calendar_slug': ''}),
 #/---all events ^^^
 
 
