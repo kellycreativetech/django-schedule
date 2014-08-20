@@ -33,7 +33,7 @@ def calendar(request, calendar_slug, template='schedule/calendar.html', extra_co
     context.update(extra_context)
     return render_to_response(template, context, context_instance=RequestContext(request))
 
-def calendar_by_periods(request, calendar_slug, periods=None,
+def calendar_by_periods(request, calendar_slug=None, periods=None,
     template_name="schedule/calendar_by_period.html", extra_context=None):
     """
     This view is for getting a calendar, but also getting periods with that
@@ -68,7 +68,14 @@ def calendar_by_periods(request, calendar_slug, periods=None,
 
     """
     extra_context = extra_context or {}
-    calendar = get_object_or_404(Calendar, slug=calendar_slug)
+
+    if calendar_slug:
+        calendar = get_object_or_404(Calendar, slug=calendar_slug)
+        event_list = GET_EVENTS_FUNC(request, calendar)
+    else:
+        calendar = None
+        event_list = Event.objects.all()
+
     date = coerce_date_dict(request.GET)
     if date:
         try:
@@ -77,7 +84,6 @@ def calendar_by_periods(request, calendar_slug, periods=None,
             raise Http404
     else:
         date = datetime.datetime.now()
-    event_list = GET_EVENTS_FUNC(request, calendar)
     period_objects = dict([(period.__name__.lower(), period(event_list, date)) for period in periods])
     context = {
             'date': date,
