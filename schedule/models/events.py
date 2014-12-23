@@ -27,6 +27,11 @@ class Event(models.Model):
     end = models.DateTimeField(_("end"),help_text=_("The end time must be later than the start time."))
     title = models.CharField(_("title"), max_length = 255)
     description = models.TextField(_("description"), null = True, blank = True)
+    image = models.ImageField(upload_to="event_imgs", blank=True, null=True)
+    soldout = models.BooleanField(default=False, verbose_name="This event is sold out")
+    entrycost = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Entry Cost", help_text=_("This is the cost to be paid at the door on the day of the event."))
+    rsvpcost = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="RSVP Cost", help_text=_("This is the cost to be paid online for the RSVP to be saved."))
+
     creator = models.ForeignKey(User, null = True, blank=True, verbose_name=_("creator"))
     created_on = models.DateTimeField(_("created on"), default = datetime.datetime.now)
     rule = models.ForeignKey(Rule, null = True, blank = True, verbose_name=_("rule"), help_text=_("Select '----' for a one time only event."))
