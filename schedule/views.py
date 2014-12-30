@@ -5,6 +5,7 @@ from django.http import HttpResponseRedirect, Http404, HttpResponse
 from django.template import RequestContext
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.generic.create_update import delete_object
 import datetime
@@ -14,6 +15,33 @@ from schedule.forms import EventForm, OccurrenceForm, AttendeeForm
 from schedule.models import *
 from schedule.periods import weekday_names
 from schedule.utils import check_event_permissions, coerce_date_dict
+
+from django.core.mail import EmailMultiAlternatives, send_mail
+from django.template.loader import get_template
+from django.template import Context
+from django.conf import settings
+
+
+def _send_email(template, to, subject, context={}):
+
+    context = Context(context)
+
+    html_tmpl = get_template('%s.html' %  template)
+    html = html_tmpl.render(context)
+
+    txt_tmpl = get_template('%s.txt' %  template)
+    txt = txt_tmpl.render(context)
+
+    msg = EmailMultiAlternatives(
+        subject,
+        txt,
+        settings.DEFAULT_FROM_EMAIL,
+        [to] if isinstance(to, basestring) else to,
+    )
+    msg.attach_alternative(html, "text/html")
+    msg.send()
+
+
 
 def calendar(request, calendar_slug, template='schedule/calendar.html', extra_context=None):
     """
@@ -152,8 +180,17 @@ def occurrence(request, event_id,
 
     if USE_ATTENDEES:
         form = AttendeeForm(event, occurrence, request.POST or None)
+        attendee_count = occurrence.attendee_set.filter(attending=True, wait_list=False).count()
+        waitlist_count = occurrence.attendee_set.filter(attending=True, wait_list=True).count()
+
+        #boolean for if the event is full or not.
+        full = False
+        if event.max_attendees > 0:
+            full = (event.max_attendees <= attendee_count)
 
         amount = int((event.rsvpcost or 0) * 100)
+
+        attendee = None
 
         if form.is_valid():
             # Save Occurrence, in case it has not been persisted yet.
@@ -166,9 +203,15 @@ def occurrence(request, event_id,
                 email=form.cleaned_data.get('email', None) or form.cleaned_data['stripeEmail'],
                 phone=form.cleaned_data['phone']
             )
+
+            if full:
+                attendee.wait_list = True
+
+            # Save, create confirmation code
             attendee.save()
 
-            if amount:
+
+            if (attendee.wait_list == False) and amount:
                 import stripe
                 # Charge Credit Card
                 card = stripe.Token.retrieve(form.cleaned_data['stripeToken'])
@@ -177,15 +220,49 @@ def occurrence(request, event_id,
                   amount=amount,
                   currency="usd",
                   card=card,
-                  description="RSVP %s" % occurrence.title,
-                  metadata={},
+                  description="RSVP %s, confirmation code %s" % (occurrence.title, attendee.confirmation_code),
+                  metadata={
+                    "id": attendee.id,
+                    "confirmation_code": attendee.confirmation_code,
+                  },
                 )
 
                 # Save Attendee Again
                 attendee.stripe_transaction = charge_obj.id
                 attendee.save()
 
-                # Do some stuff? Email the individual a reciept? Show them their confirmation code.
+
+            # Do some stuff? Email the individual a reciept? Show them their confirmation code.
+            if attendee.wait_list:
+                messages.add_message(request, messages.INFO, "Thanks, you've been added to the wait list")
+            else:
+                messages.add_message(request, messages.INFO, "Your confirmation code is %s. More info will be emailed to you at %s" % (attendee.confirmation_code, attendee.email))
+
+                email_context = {
+                    "event": event,
+                    "occurrence": occurrence,
+                    "amount": amount,
+                    "attendee_count": attendee_count,
+                    "waitlist_count": waitlist_count,
+                    "full": full,
+                    "attendee": attendee,
+                }
+                # Email organizers
+                _send_email(
+                    "schedule/organizers_email",
+                    [m[1] for m in settings.MANAGERS],
+                    "New Attendee: %s" % occurrence.title,
+                    email_context
+                )
+
+                # Email attendee
+                _send_email(
+                    "schedule/attendee_email",
+                    attendee.email,
+                    "Confirmation: %s" % occurrence.title,
+                    email_context
+                )
+
 
             # Return Redirect
             return redirect(request.get_full_path())
@@ -193,6 +270,10 @@ def occurrence(request, event_id,
         context.update({
             "form": form,
             "amount": amount,
+            "attendee_count": attendee_count,
+            "waitlist_count": waitlist_count,
+            "full": full,
+            "attendee": attendee,
         })
 
 

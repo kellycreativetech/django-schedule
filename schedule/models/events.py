@@ -443,7 +443,7 @@ class Occurrence(models.Model):
 
     @property
     def soldout(self):
-        return self.event.max_attendees <= self.attendee_set.filter(attending=True).count()
+        return self.event.max_attendees <= self.attendee_set.filter(attending=True, wait_list=False).count()
 
     def __unicode__(self):
         return ugettext("%(start)s to %(end)s") % {
@@ -465,7 +465,8 @@ class Attendee(models.Model):
     occurrence = models.ForeignKey(Occurrence)
     confirmation_code = models.CharField(max_length=16, db_index=True)
     stripe_transaction = models.CharField(max_length=64, db_index=True, blank=True, null=True)
-    attending = models.BooleanField(default=True)
+    attending = models.BooleanField(default=True, db_index=True)
+    wait_list = models.BooleanField(default=False, db_index=True)
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
@@ -485,5 +486,11 @@ class Attendee(models.Model):
     def stripe_url(self):
         return "https://dashboard.stripe.com/payments/%s" % self.stripe_transaction
 
+    def get_absolute_url(self):
+        return self.occurrence.get_absolute_url()
+
     class Meta:
         app_label = 'schedule'
+        ordering = ['-wait_list', 'attending', 'created']
+
+

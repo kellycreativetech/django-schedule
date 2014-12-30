@@ -1,0 +1,17 @@
+{% load i18n %}
+
+Registration Confirmation for {{ occurrence.title }}
+{% blocktrans with occurrence.start|date:_("DATETIME_FORMAT") as start_date %}{{ start_date }}{% endblocktrans %}
+
+{{ occurrence.description|striptags }}
+
+Name:					{{ attendee.name }}
+Confirmation Code:		{{ attendee.confirmation_code }}
+
+{% if attendee.stripe_transaction %}
+Paid:					$ {{ event.rsvpcost|floatformat:2 }}
+{% endif %}
+
+{% if event.entrycost %}
+Due at door:			$ {{ event.entrycost }}
+{% endif %}
