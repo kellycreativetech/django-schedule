@@ -1,5 +1,5 @@
 from urllib import quote
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render_to_response, get_object_or_404, redirect
 from django.views.generic.create_update import delete_object
 from django.http import HttpResponseRedirect, Http404, HttpResponse
 from django.template import RequestContext
@@ -9,8 +9,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.generic.create_update import delete_object
 import datetime
 
-from schedule.conf.settings import GET_EVENTS_FUNC, OCCURRENCE_CANCEL_REDIRECT
-from schedule.forms import EventForm, OccurrenceForm
+from schedule.conf.settings import GET_EVENTS_FUNC, OCCURRENCE_CANCEL_REDIRECT, USE_ATTENDEES
+from schedule.forms import EventForm, OccurrenceForm, AttendeeForm
 from schedule.models import *
 from schedule.periods import weekday_names
 from schedule.utils import check_event_permissions, coerce_date_dict
@@ -149,6 +149,51 @@ def occurrence(request, event_id,
         'back_url': back_url,
     }
     context.update(extra_context)
+
+    if USE_ATTENDEES:
+        form = AttendeeForm(event, occurrence, request.POST or None)
+        amount = int(event.rsvpcost * 100)
+        if form.is_valid():
+            # Save Occurrence, in case it has not been persisted yet.
+            occurrence.save()
+
+            # Save Attendee
+            attendee = Attendee(
+                occurrence=occurrence,
+                name=form.cleaned_data['name'],
+                email=form.cleaned_data.get('email', None) or form.cleaned_data['stripeEmail'],
+                phone=form.cleaned_data['phone']
+            )
+            attendee.save()
+
+            if amount:
+                import stripe
+                # Charge Credit Card
+                card = stripe.Token.retrieve(form.cleaned_data['stripeToken'])
+
+                charge_obj = stripe.Charge.create(
+                  amount=amount,
+                  currency="usd",
+                  card=card,
+                  description="RSVP %s" % occurrence.title,
+                  metadata={},
+                )
+
+                # Save Attendee Again
+                attendee.stripe_transaction = charge_obj.id
+                attendee.save()
+
+                # Do some stuff? Email the individual a reciept? Show them their confirmation code.
+
+            # Return Redirect
+            return redirect(request.get_full_path())
+
+        context.update({
+            "form": form,
+            "amount": amount,
+        })
+
+
     return render_to_response(template_name, context, context_instance=RequestContext(request))
 
 

@@ -45,3 +45,5 @@ if not GET_EVENTS_FUNC:
 
 # URL to redirect to to after an occurrence is canceled
 OCCURRENCE_CANCEL_REDIRECT = getattr(settings, 'OCCURRENCE_CANCEL_REDIRECT', None)
+
+USE_ATTENDEES = getattr(settings, 'SCHEDULE_USE_ATTENDEES', False)

@@ -52,3 +52,27 @@ class RuleForm(forms.ModelForm):
         except (ValueError, SyntaxError):
             raise forms.ValidationError(_("Params format looks invalid"))
         return self.cleaned_data["params"]
+
+
+class AttendeeForm(forms.Form):
+    name = forms.CharField()
+    phone = forms.CharField()
+    email = forms.EmailField()
+
+    use_stripe = False
+
+    def __init__(self, event, occurrence, *args, **kwargs):
+        self.event = event
+        self.occurrence = occurrence
+        super(AttendeeForm, self).__init__(*args, **kwargs)
+
+        if self.event.rsvpcost:
+            self.use_stripe = True
+
+            self.fields['stripeEmail'] = self.fields['email']
+            self.fields['stripeEmail'].label = "Email"
+            self.fields['stripeEmail'].widget = forms.HiddenInput()
+            del self.fields['email']
+
+            self.fields['stripeToken'] = forms.CharField(widget=forms.HiddenInput)
+
