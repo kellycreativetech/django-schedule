@@ -152,7 +152,9 @@ def occurrence(request, event_id,
 
     if USE_ATTENDEES:
         form = AttendeeForm(event, occurrence, request.POST or None)
-        amount = int(event.rsvpcost * 100)
+
+        amount = int((event.rsvpcost or 0) * 100)
+
         if form.is_valid():
             # Save Occurrence, in case it has not been persisted yet.
             occurrence.save()
