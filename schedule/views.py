@@ -11,7 +11,7 @@ from django.views.generic.create_update import delete_object
 import datetime
 
 from schedule.conf.settings import GET_EVENTS_FUNC, OCCURRENCE_CANCEL_REDIRECT, USE_ATTENDEES
-from schedule.forms import EventForm, OccurrenceForm, AttendeeForm
+from schedule.forms import EventForm, OccurrenceForm, AttendeeForm, ModifyAttendanceForm
 from schedule.models import *
 from schedule.periods import weekday_names
 from schedule.utils import check_event_permissions, coerce_date_dict
@@ -450,6 +450,55 @@ def delete_event(request, event_id, next=None, login_required=True, extra_contex
                          extra_context = extra_context,
                          login_required = login_required
                         )
+
+
+def lookup_confirmation_code(request):
+    try:
+        attendee = Attendee.objects.get(confirmation_code__iexact=request.POST.get('confirmation_code', '').strip())
+        return redirect(reverse('modify_attendance', args=[attendee.confirmation_code]))
+    except Attendee.DoesNotExist:
+        messages.add_message(request, messages.WARNING, "Could not find confirmation code. Please try again.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+def modify_attendance(request, confirmation_code):
+    try:
+        attendee = Attendee.objects.get(confirmation_code=confirmation_code)
+        form = ModifyAttendanceForm(request.POST or None, instance=attendee)
+
+        if form.is_valid():
+            attendee = form.save()
+
+            # Email organizers
+            _send_email(
+                "schedule/organizers_email_update",
+                [m[1] for m in settings.MANAGERS],
+                "Attendee Update: %s" % attendee.occurrence.title,
+                {
+                    "attendee": attendee,
+                    "occurrence": attendee.occurrence,
+                    "event": attendee.occurrence.event,
+                }
+            )
+
+            messages.add_message(request, messages.SUCCESS, "Thank you.")
+            return redirect(reverse('modify_attendance', args=[attendee.confirmation_code]))
+
+        return render_to_response(
+            "schedule/modify_attendance.html",
+            {
+                "attendee": attendee,
+                "occurrence": attendee.occurrence,
+                "event": attendee.occurrence.event,
+                "form": form,
+            },
+            context_instance=RequestContext(request)
+        )
+
+    except Attendee.DoesNotExist:
+        messages.add_message(request, messages.WARNING, "Your confirmation code appears to be incorrect, please check it and try again.")
+        return redirect('/')
+
 
 def check_next_url(next):
     """

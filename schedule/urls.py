@@ -129,6 +129,10 @@ url(r'^occurrence/edit/(?P<event_id>\d+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d
     'schedule.views.edit_occurrence',
     name="edit_occurrence_by_date"),
 
+#urls for managing attendees
+url(r'^lookup_confirmation_code', 'schedule.views.lookup_confirmation_code', name='lookup_confirmation_code'),
+url(r'^modify_attendance/(?P<confirmation_code>[-\w\d]+)', 'schedule.views.modify_attendance', name='modify_attendance'),
+
 
 #feed urls
 # url(r'^feed/calendar/(.*)/$',

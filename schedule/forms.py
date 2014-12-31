@@ -1,6 +1,6 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
-from schedule.models import Event, Occurrence, Rule
+from schedule.models import Event, Occurrence, Rule, Attendee
 from schedule.fields import DateTimeField
 import datetime
 import time
@@ -75,4 +75,14 @@ class AttendeeForm(forms.Form):
             del self.fields['email']
 
             self.fields['stripeToken'] = forms.CharField(widget=forms.HiddenInput)
+
+
+
+class ModifyAttendanceForm(forms.ModelForm):
+
+    class Meta:
+        model = Attendee
+        fields = [
+            'attending',
+        ]
 
