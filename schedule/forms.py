@@ -79,6 +79,11 @@ class AttendeeForm(forms.Form):
 
 
 class ModifyAttendanceForm(forms.ModelForm):
+    attending = forms.TypedChoiceField(
+        coerce=lambda x: x == 'True',
+        choices=((False, 'Sorry, I need to cancel my RSVP for this event'), (True, 'I plan on attending this event')),
+        widget=forms.RadioSelect
+    )
 
     class Meta:
         model = Attendee
