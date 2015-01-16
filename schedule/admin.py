@@ -20,6 +20,10 @@ class RuleAdmin(admin.ModelAdmin):
 
 class EventAdmin(admin.ModelAdmin):
     form = EventAdminForm
+    list_display = [
+        'title',
+        'start',
+    ]
 
 class AttendeeAdmin(admin.ModelAdmin):
     list_display = [
