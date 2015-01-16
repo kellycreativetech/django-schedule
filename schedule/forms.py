@@ -29,7 +29,7 @@ class EventForm(SpanForm):
 
 
 class EventAdminForm(SpanForm):
-    end_recurring_period = DateTimeField(help_text=_("This date is ignored for one time only events."), required=False)
+    # end_recurring_period = DateTimeField(help_text=_("This date is ignored for one time only events."), required=False)
 
     class Meta:
         model = Event
