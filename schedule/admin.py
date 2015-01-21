@@ -3,10 +3,16 @@ from schedule.forms import RuleForm, EventAdminForm
 from django.db import models
 from django.conf import settings
 
-from schedule.models import Calendar, Event, CalendarRelation, Rule, Attendee
+from schedule.models import Calendar, Event, CalendarRelation, Rule, Attendee, Occurrence
 
 
 from schedule.conf.settings import USE_ATTENDEES
+
+class OccurrenceAdmin(admin.ModelAdmin):
+
+    list_display = [
+        'title', 'start', 'end'
+    ]
 
 
 class CalendarAdminOptions(admin.ModelAdmin):
@@ -55,10 +61,12 @@ class AttendeeAdmin(admin.ModelAdmin):
         return ""
     stripe_url.allow_tags = True
 
+
 admin.site.register(Calendar, CalendarAdminOptions)
 admin.site.register(Rule, RuleAdmin)
 admin.site.register(CalendarRelation)
 admin.site.register(Event, EventAdmin)
+admin.site.register(Occurrence, OccurrenceAdmin)
 
 if USE_ATTENDEES:
     admin.site.register(Attendee, AttendeeAdmin)
