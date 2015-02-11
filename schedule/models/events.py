@@ -39,6 +39,7 @@ class Event(models.Model):
     objects = EventManager()
 
     image = models.ImageField(upload_to="event_imgs", blank=True, null=True)
+    rsvp_requested = models.BooleanField(default=False, help_text="Check this box to include an RSVP form on this event")
     max_attendees = models.IntegerField(default=None, blank=True, null=True, help_text="Leave blank for unlimited attendees.")
     entrycost = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Entry Cost", help_text=_("This is the cost to be paid at the door on the day of the event."))
     rsvpcost = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="RSVP Cost", help_text=_("This is the cost to be paid online for the RSVP to be saved. If there is no RSVP Cost, a credit card form will not be displayed."))
