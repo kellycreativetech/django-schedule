@@ -56,18 +56,19 @@ class RuleForm(forms.ModelForm):
 
 class AttendeeForm(forms.Form):
     name = forms.CharField()
-    phone = forms.CharField()
-    email = forms.EmailField()
+    phone = forms.CharField(required=False)
+    email = forms.EmailField(required=False)
 
     use_stripe = False
 
-    def __init__(self, event, occurrence, *args, **kwargs):
-        self.event = event
-        self.occurrence = occurrence
+    def __init__(self, *args, **kwargs):
+        self.event = kwargs.pop('event', None)
+        self.occurrence = kwargs.pop('occurrence', None)
         super(AttendeeForm, self).__init__(*args, **kwargs)
 
-        if self.event.rsvpcost:
+        if self.event and self.event.rsvpcost:
             self.use_stripe = True
+            self.fields['email'].required = True
 
             self.fields['stripeEmail'] = self.fields['email']
             self.fields['stripeEmail'].label = "Email"

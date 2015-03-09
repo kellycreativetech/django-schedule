@@ -468,13 +468,14 @@ class Attendee(models.Model):
     stripe_transaction = models.CharField(max_length=64, db_index=True, blank=True, null=True)
     attending = models.BooleanField(default=True, db_index=True)
     wait_list = models.BooleanField(default=False, db_index=True)
+    parent = models.ForeignKey('self', blank=True, null=True)
 
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
     name = models.CharField(max_length=64)
-    phone = models.CharField(max_length=64)
-    email = models.EmailField(max_length=64)
+    phone = models.CharField(max_length=64, blank=True, default="")
+    email = models.EmailField(max_length=64, blank=True, default="")
 
     entry = models.ForeignKey(FormEntry, blank=True, null=True)
 

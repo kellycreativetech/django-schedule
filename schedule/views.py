@@ -1,16 +1,20 @@
-from urllib import quote
-from django.shortcuts import render_to_response, get_object_or_404, redirect
-from django.views.generic.create_update import delete_object
-from django.http import HttpResponseRedirect, Http404, HttpResponse
-from django.template import RequestContext
-from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
+from django.forms.formsets import formset_factory
+from django.http import HttpResponseRedirect, Http404, HttpResponse
+from django.shortcuts import render_to_response, get_object_or_404, redirect
+from django.template import RequestContext
 from django.views.generic.create_update import delete_object
+from django.views.generic.create_update import delete_object
+from urllib import quote
 import datetime
 
-from schedule.conf.settings import GET_EVENTS_FUNC, OCCURRENCE_CANCEL_REDIRECT, USE_ATTENDEES
+from schedule.conf.settings import (GET_EVENTS_FUNC, OCCURRENCE_CANCEL_REDIRECT,
+    USE_ATTENDEES, USE_MAILCHIMP, MAILCHIMP_KEY, MAILCHIMP_EVENTLIST,
+    MAILCHIMP_MARKETINGLIST)
+
 from schedule.forms import EventForm, OccurrenceForm, AttendeeForm, ModifyAttendanceForm
 from schedule.models import *
 from schedule.periods import weekday_names
@@ -179,7 +183,11 @@ def occurrence(request, event_id,
     context.update(extra_context)
 
     if USE_ATTENDEES:
-        form = AttendeeForm(event, occurrence, request.POST or None)
+        form = AttendeeForm(request.POST or None, event=event, occurrence=occurrence, prefix='primary')
+        AttendeeFormset = formset_factory(AttendeeForm, extra=3)
+        formset = AttendeeFormset(request.POST or None, prefix="extra-guests")
+        mailing_list = request.POST.get('mailing_list', False)
+
         attendee_count = occurrence.attendee_set.filter(attending=True, wait_list=False).count()
         waitlist_count = occurrence.attendee_set.filter(attending=True, wait_list=True).count()
 
@@ -188,20 +196,25 @@ def occurrence(request, event_id,
         if event.max_attendees > 0:
             full = (event.max_attendees <= attendee_count)
 
-        amount = int((event.rsvpcost or 0) * 100)
-
         attendee = None
 
-        if form.is_valid():
+        amount = int((event.rsvpcost or 0) * 100)
+
+        if form.is_valid() and formset.is_valid():
             # Save Occurrence, in case it has not been persisted yet.
             occurrence.save()
+
+            amount = int((event.rsvpcost or 0) * 100)
+            amount *= (1 + len(formset))
+
+            primary_email = form.cleaned_data.get('email', None) or form.cleaned_data['stripeEmail']
 
             # Save Attendee
             attendee = Attendee(
                 occurrence=occurrence,
                 name=form.cleaned_data['name'],
-                email=form.cleaned_data.get('email', None) or form.cleaned_data['stripeEmail'],
-                phone=form.cleaned_data['phone']
+                email=primary_email,
+                phone=form.cleaned_data['phone'],
             )
 
             if full:
@@ -209,6 +222,53 @@ def occurrence(request, event_id,
 
             # Save, create confirmation code
             attendee.save()
+
+            for f in formset:
+                # Save Attendee
+                if f.cleaned_data.get('name'):
+                    a = Attendee(
+                        occurrence=occurrence,
+                        name=f.cleaned_data['name'],
+                        email=f.cleaned_data.get('email', None),
+                        phone=f.cleaned_data.get('phone', None),
+                        parent=attendee,
+                        confirmation_code=attendee.confirmation_code
+                    )
+
+                    if full:
+                        a.wait_list = True
+
+                    # Save, create confirmation code
+                    a.save()
+
+            if USE_MAILCHIMP:
+                import mailchimp
+                m = mailchimp.Mailchimp(MAILCHIMP_KEY)
+                MAILCHIMP_EVENTLIST
+                MAILCHIMP_MARKETINGLIST
+                # Add the attendee to this event
+                # Add any sub-attendees
+
+                try:
+                    m.lists.subscribe(MAILCHIMP_EVENTLIST, {
+                        'email': primary_email,
+                        'merge_vars': {
+                            'groupings': [
+                                {'name': '%s: %s' % (occurrence.event.title, occurrence.id) }
+                            ]
+                        }
+                    }, double_optin=False)
+                except mailchimp.ListAlreadySubscribedError:
+                    pass
+
+
+                if mailing_list:
+                    try:
+                        m.lists.subscribe(MAILCHIMP_MARKETINGLIST, {
+                            'email': primary_email,
+                        })
+                    except mailchimp.ListAlreadySubscribedError:
+                        pass
 
 
             if (attendee.wait_list == False) and amount:
@@ -269,6 +329,7 @@ def occurrence(request, event_id,
 
         context.update({
             "form": form,
+            "formset": formset,
             "amount": amount,
             "attendee_count": attendee_count,
             "waitlist_count": waitlist_count,
