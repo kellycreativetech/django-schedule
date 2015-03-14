@@ -10,3 +10,12 @@ Email:                  {{ attendee.email }}
 Phone:                  {{ attendee.phone }}
 Registered:             {{ attendee.created }}
 {% if attendee.stripe_transaction %}Payment information     {{ attendee.stripe_url }}{% endif %}
+
+{% for a in other_attendees %}
+Name:                   {{ a.name }}
+Attending:              {{ a.attending }}
+Confirmation Code:      {{ a.confirmation_code }}
+Email:                  {{ a.email }}
+Phone:                  {{ a.phone }}
+Registered:             {{ a.created }}
+{% endfor %}

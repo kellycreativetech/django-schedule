@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.forms.formsets import formset_factory
+from django.forms.models import modelformset_factory
 from django.http import HttpResponseRedirect, Http404, HttpResponse
 from django.shortcuts import render_to_response, get_object_or_404, redirect
 from django.template import RequestContext
@@ -205,9 +206,11 @@ def occurrence(request, event_id,
             occurrence.save()
 
             amount = int((event.rsvpcost or 0) * 100)
+
             for f in formset:
                 if f.cleaned_data.get('name'):
                     amount += int((event.rsvpcost or 0) * 100)
+
 
             primary_email = form.cleaned_data.get('email', None) or form.cleaned_data['stripeEmail']
 
@@ -234,7 +237,7 @@ def occurrence(request, event_id,
                         email=f.cleaned_data.get('email', None),
                         phone=f.cleaned_data.get('phone', None),
                         parent=attendee,
-                        confirmation_code=attendee.confirmation_code
+                        confirmation_code=attendee.confirmation_code,
                     )
 
                     if full:
@@ -518,7 +521,7 @@ def delete_event(request, event_id, next=None, login_required=True, extra_contex
 
 def lookup_confirmation_code(request):
     try:
-        attendee = Attendee.objects.get(confirmation_code__iexact=request.POST.get('confirmation_code', '').strip())
+        attendee = Attendee.objects.get(parent__isnull=True, confirmation_code__iexact=request.POST.get('confirmation_code', '').strip())
         return redirect(reverse('modify_attendance', args=[attendee.confirmation_code]))
     except Attendee.DoesNotExist:
         messages.add_message(request, messages.WARNING, "Could not find confirmation code. Please try again.")
@@ -527,11 +530,14 @@ def lookup_confirmation_code(request):
 
 def modify_attendance(request, confirmation_code):
     try:
-        attendee = Attendee.objects.get(confirmation_code=confirmation_code)
+        attendee = Attendee.objects.get(parent__isnull=True, confirmation_code=confirmation_code)
         form = ModifyAttendanceForm(request.POST or None, instance=attendee)
+        AttendeeFormset = modelformset_factory(Attendee, form=ModifyAttendanceForm, extra=0)
+        formset = AttendeeFormset(request.POST or None, queryset=attendee.attendee_set.all(), prefix="extra-guests")
 
-        if form.is_valid():
+        if form.is_valid() and formset.is_valid():
             attendee = form.save()
+            other_attendees = formset.save()
 
             # Email organizers
             _send_email(
@@ -540,6 +546,7 @@ def modify_attendance(request, confirmation_code):
                 "Attendee Update: %s" % attendee.occurrence.title,
                 {
                     "attendee": attendee,
+                    "other_attendees": other_attendees,
                     "occurrence": attendee.occurrence,
                     "event": attendee.occurrence.event,
                 }
@@ -555,6 +562,7 @@ def modify_attendance(request, confirmation_code):
                 "occurrence": attendee.occurrence,
                 "event": attendee.occurrence.event,
                 "form": form,
+                "formset": formset,
             },
             context_instance=RequestContext(request)
         )

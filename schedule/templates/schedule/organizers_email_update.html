@@ -10,6 +10,21 @@
   <dt>Phone</dt><dd>{{ attendee.phone }}</dd>
   <dt>Registered</dt><dd>{{ attendee.created }}</dd>
 </dl>
+
+{% for attendee in other_attendees %}
+<hr/>
+<dl>
+  <dt>Name</dt><dd>{{ attendee.name }}</dd>
+  <dt>Attending</dt><dd>{{ attendee.attending }}</dd>
+  <dt>Confirmation Code</dt><dd>{{ attendee.confirmation_code }}</dd
+>
+  <dt>Email</dt><dd>{{ attendee.email }}</dd>
+  <dt>Phone</dt><dd>{{ attendee.phone }}</dd>
+  <dt>Registered</dt><dd>{{ attendee.created }}</dd>
+</dl>
+{% endfor %}
+
+
 <a class="btn" href="/admin/schedule/attendee/{{ attendee.id }}">
 Edit Details</a>
 {% if attendee.stripe_transaction %}
