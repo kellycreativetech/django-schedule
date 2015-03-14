@@ -205,7 +205,9 @@ def occurrence(request, event_id,
             occurrence.save()
 
             amount = int((event.rsvpcost or 0) * 100)
-            amount *= (1 + len(formset))
+            for f in formset:
+                if f.cleaned_data.get('name'):
+                    amount += int((event.rsvpcost or 0) * 100)
 
             primary_email = form.cleaned_data.get('email', None) or form.cleaned_data['stripeEmail']
 
@@ -335,6 +337,7 @@ def occurrence(request, event_id,
             "waitlist_count": waitlist_count,
             "full": full,
             "attendee": attendee,
+            "stripe_public_key": getattr(settings, 'STRIPE_API_KEY', ''),
         })
 
 
