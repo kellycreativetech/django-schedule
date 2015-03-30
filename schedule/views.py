@@ -306,7 +306,7 @@ def occurrence(request, event_id,
                 email_context = {
                     "event": event,
                     "occurrence": occurrence,
-                    "amount": amount,
+                    "amount": int(amount / 100),
                     "attendee_count": attendee_count,
                     "waitlist_count": waitlist_count,
                     "full": full,
