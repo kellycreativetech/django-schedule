@@ -33,6 +33,7 @@ class EventAdminForm(SpanForm):
 
     class Meta:
         model = Event
+        fields = "__all__"
 
 
 class OccurrenceForm(SpanForm):
