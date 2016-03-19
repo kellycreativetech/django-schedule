@@ -211,7 +211,6 @@ def occurrence(request, event_id,
                 if f.cleaned_data.get('name'):
                     amount += int((event.rsvpcost or 0) * 100)
 
-
             primary_email = form.cleaned_data.get('email', None) or form.cleaned_data['stripeEmail']
 
             # Save Attendee
@@ -265,6 +264,8 @@ def occurrence(request, event_id,
                     }, double_optin=False)
                 except mailchimp.ListAlreadySubscribedError:
                     pass
+                except mailchimp.ValidationError:
+                    pass
 
 
                 if mailing_list:
@@ -274,7 +275,8 @@ def occurrence(request, event_id,
                         })
                     except mailchimp.ListAlreadySubscribedError:
                         pass
-
+                    except mailchimp.ValidationError:
+                        pass
 
             if (attendee.wait_list == False) and amount:
                 import stripe

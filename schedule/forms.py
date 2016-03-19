@@ -33,7 +33,9 @@ class EventAdminForm(SpanForm):
 
     class Meta:
         model = Event
-        fields = "__all__"
+        from django import VERSION
+        if VERSION[1] in (8,9,10):
+            fields = "__all__"
 
 
 class OccurrenceForm(SpanForm):
