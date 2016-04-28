@@ -298,7 +298,7 @@ def occurrence(request, event_id,
                     attendee.save()
                 except stripe.CardError:
                     messages.add_message(request, messages.WARNING,
-                                         "You’ve been added to the list, but there was a problem with you card and it was not processed. Please pay the full amount on the day of the event." % attendee.email)
+                                         "You've been added to the list, but there was a problem with you card and it was not processed. Please pay the full amount on the day of the event." % attendee.email)
                     attendee.payment_exception = True
                     attendee.save()
 
