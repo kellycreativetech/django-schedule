@@ -283,20 +283,24 @@ def occurrence(request, event_id,
                 # Charge Credit Card
                 card = stripe.Token.retrieve(form.cleaned_data['stripeToken'])
 
-                charge_obj = stripe.Charge.create(
-                  amount=amount,
-                  currency="usd",
-                  card=card,
-                  description="RSVP %s, confirmation code %s" % (occurrence.title, attendee.confirmation_code),
-                  metadata={
-                    "id": attendee.id,
-                    "confirmation_code": attendee.confirmation_code,
-                  },
-                )
-
-                # Save Attendee Again
-                attendee.stripe_transaction = charge_obj.id
-                attendee.save()
+                try:
+                    charge_obj = stripe.Charge.create(
+                        amount=amount,
+                        currency="usd",
+                        card=card,
+                        description="RSVP %s, confirmation code %s" % (occurrence.title, attendee.confirmation_code),
+                        metadata={
+                            "id": attendee.id,
+                            "confirmation_code": attendee.confirmation_code,
+                        },
+                    )
+                    attendee.stripe_transaction = charge_obj.id
+                    attendee.save()
+                except stripe.CardError:
+                    messages.add_message(request, messages.WARNING,
+                                         "You’ve been added to the list, but there was a problem with you card and it was not processed. Please pay the full amount on the day of the event." % attendee.email)
+                    attendee.payment_exception = True
+                    attendee.save()
 
 
             # Do some stuff? Email the individual a reciept? Show them their confirmation code.

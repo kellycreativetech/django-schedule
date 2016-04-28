@@ -466,6 +466,7 @@ class Attendee(models.Model):
     occurrence = models.ForeignKey(Occurrence)
     confirmation_code = models.CharField(max_length=16, db_index=True)
     stripe_transaction = models.CharField(max_length=64, db_index=True, blank=True, null=True)
+    payment_exception = models.BooleanField(default=False)
     attending = models.BooleanField(default=True, db_index=True)
     wait_list = models.BooleanField(default=False, db_index=True)
     parent = models.ForeignKey('self', blank=True, null=True)
