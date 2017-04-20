@@ -143,4 +143,4 @@ url(r'^modify_attendance/(?P<confirmation_code>[-\w\d]+)', 'schedule.views.modif
 # (r'^ical/calendar/(.*)/$', CalendarICalendar()),
 #
 #  url(r'^$', object_list, info_dict, name='schedule'),
-# )
+ )
