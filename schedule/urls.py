@@ -12,40 +12,40 @@ info_dict = {
 urlpatterns = patterns('',
 
 # urls for Calendars
-url(r'^calendar/$',
-    object_list,
-    name="schedule",
-    kwargs={'queryset':Calendar.objects.all(), 'template_name':'schedule/calendar_list.html'}),
-
-url(r'^calendar/year/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name="year_calendar",
-    kwargs={'periods': [Year], 'template_name': 'schedule/calendar_year.html'}),
-
-url(r'^calendar/tri_month/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name="tri_month_calendar",
-    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_tri_month.html'}),
-
-url(r'^calendar/compact_month/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name = "compact_calendar",
-    kwargs={'periods': [Month], 'template_name': 'schedule/calendar_compact_month.html'}),
+# url(r'^calendar/$',
+#     object_list,
+#     name="schedule",
+#     kwargs={'queryset':Calendar.objects.all(), 'template_name':'schedule/calendar_list.html'}),
+#
+# url(r'^calendar/year/(?P<calendar_slug>[-\w]+)/$',
+#     'schedule.views.calendar_by_periods',
+#     name="year_calendar",
+#     kwargs={'periods': [Year], 'template_name': 'schedule/calendar_year.html'}),
+#
+# url(r'^calendar/tri_month/(?P<calendar_slug>[-\w]+)/$',
+#     'schedule.views.calendar_by_periods',
+#     name="tri_month_calendar",
+#     kwargs={'periods': [Month], 'template_name': 'schedule/calendar_tri_month.html'}),
+#
+# url(r'^calendar/compact_month/(?P<calendar_slug>[-\w]+)/$',
+#     'schedule.views.calendar_by_periods',
+#     name = "compact_calendar",
+#     kwargs={'periods': [Month], 'template_name': 'schedule/calendar_compact_month.html'}),
 
 url(r'^calendar/month/(?P<calendar_slug>[-\w]+)/$',
     'schedule.views.calendar_by_periods',
     name = "month_calendar",
     kwargs={'periods': [Month], 'template_name': 'schedule/calendar_month.html'}),
 
-url(r'^calendar/week/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name = "week_calendar",
-    kwargs={'periods': [Week], 'template_name': 'schedule/calendar_week.html'}),
-
-url(r'^calendar/daily/(?P<calendar_slug>[-\w]+)/$',
-    'schedule.views.calendar_by_periods',
-    name = "day_calendar",
-    kwargs={'periods': [Day], 'template_name': 'schedule/calendar_day.html'}),
+# url(r'^calendar/week/(?P<calendar_slug>[-\w]+)/$',
+#     'schedule.views.calendar_by_periods',
+#     name = "week_calendar",
+#     kwargs={'periods': [Week], 'template_name': 'schedule/calendar_week.html'}),
+#
+# url(r'^calendar/daily/(?P<calendar_slug>[-\w]+)/$',
+#     'schedule.views.calendar_by_periods',
+#     name = "day_calendar",
+#     kwargs={'periods': [Day], 'template_name': 'schedule/calendar_day.html'}),
 
 #---- All events, no calendar slug
 
@@ -140,7 +140,7 @@ url(r'^modify_attendance/(?P<confirmation_code>[-\w\d]+)', 'schedule.views.modif
 #    { "feed_dict": { "upcoming": UpcomingEventsFeed } }),
 
 
-(r'^ical/calendar/(.*)/$', CalendarICalendar()),
-
- url(r'^$', object_list, info_dict, name='schedule'),
-)
+# (r'^ical/calendar/(.*)/$', CalendarICalendar()),
+#
+#  url(r'^$', object_list, info_dict, name='schedule'),
+# )
