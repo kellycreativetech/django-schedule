@@ -34,7 +34,7 @@ setup(
                  'Operating System :: OS Independent',
                  'Programming Language :: Python',
                  'Topic :: Utilities'],
-    install_requires=['setuptools', 'vobject', 'django-forms-builder', dateutil],
+    install_requires=['setuptools', 'vobject', dateutil],
     license='BSD',
     test_suite = "schedule.tests",
 )
