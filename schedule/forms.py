@@ -34,7 +34,7 @@ class EventAdminForm(SpanForm):
     class Meta:
         model = Event
         from django import VERSION
-        if VERSION[1] in (8,9,10):
+        if VERSION[1] in (7,8,9,10):
             fields = "__all__"
 
 
@@ -94,4 +94,3 @@ class ModifyAttendanceForm(forms.ModelForm):
         fields = [
             'attending',
         ]
-
