@@ -13,7 +13,7 @@ urlpatterns = patterns('',
 
 # urls for Calendars
 url(r'^calendar/$',
-    object_list,
+    ListView,
     name="schedule",
     kwargs={'queryset':Calendar.objects.all(), 'template_name':'schedule/calendar_list.html'}),
 
@@ -142,5 +142,5 @@ url(r'^modify_attendance/(?P<confirmation_code>[-\w\d]+)', 'schedule.views.modif
 
 (r'^ical/calendar/(.*)/$', CalendarICalendar()),
 
- url(r'^$', object_list, info_dict, name='schedule'),
+ url(r'^$', ListView, info_dict, name='schedule'),
 )

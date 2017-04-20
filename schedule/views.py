@@ -7,8 +7,7 @@ from django.forms.models import modelformset_factory
 from django.http import HttpResponseRedirect, Http404, HttpResponse
 from django.shortcuts import render_to_response, get_object_or_404, redirect
 from django.template import RequestContext
-from django.views.generic.create_update import delete_object
-from django.views.generic.create_update import delete_object
+from django.views.generic.edit import DeleteView
 from urllib import quote
 import datetime
 
