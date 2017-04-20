@@ -1,4 +1,4 @@
-from django.conf.urls.defaults import *
+from django.conf.urls import patterns, url, include
 from django.views.generic.list import ListView
 from schedule.models import Calendar
 from schedule.feeds import UpcomingEventsFeed
