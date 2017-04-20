@@ -45,3 +45,10 @@ if not GET_EVENTS_FUNC:
 
 # URL to redirect to to after an occurrence is canceled
 OCCURRENCE_CANCEL_REDIRECT = getattr(settings, 'OCCURRENCE_CANCEL_REDIRECT', None)
+
+USE_ATTENDEES = getattr(settings, 'SCHEDULE_USE_ATTENDEES', False)
+
+USE_MAILCHIMP = getattr(settings, 'SCHEDULE_USE_MAILCHIMP', False)
+MAILCHIMP_KEY = getattr(settings, 'SCHEDULE_MAILCHIMP_KEY', '')
+MAILCHIMP_EVENTLIST = getattr(settings, 'SCHEDULE_MAILCHIMP_EVENTLIST', '')
+MAILCHIMP_MARKETINGLIST = getattr(settings, 'SCHEDULE_MAILCHIMP_MARKETINGLIST', '')
