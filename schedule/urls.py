@@ -1,5 +1,5 @@
 from django.conf.urls.defaults import *
-from django.views.generic.list_detail import object_list
+from django.views.generic.list import ListView
 from schedule.models import Calendar
 from schedule.feeds import UpcomingEventsFeed
 from schedule.feeds import CalendarICalendar
@@ -128,6 +128,10 @@ url(r'^occurrence/cancel/(?P<event_id>\d+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>
 url(r'^occurrence/edit/(?P<event_id>\d+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<hour>\d+)/(?P<minute>\d+)/(?P<second>\d+)/$',
     'schedule.views.edit_occurrence',
     name="edit_occurrence_by_date"),
+
+#urls for managing attendees
+url(r'^lookup_confirmation_code', 'schedule.views.lookup_confirmation_code', name='lookup_confirmation_code'),
+url(r'^modify_attendance/(?P<confirmation_code>[-\w\d]+)', 'schedule.views.modify_attendance', name='modify_attendance'),
 
 
 #feed urls

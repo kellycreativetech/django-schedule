@@ -1,12 +1,12 @@
 from django.conf import settings
 from django.conf.urls.defaults import *
-from django.views.generic.simple import direct_to_template
+from django.views.generic.base import TemplateView
 
 from django.contrib import admin
 admin.autodiscover()
 
 urlpatterns = patterns('',
-    url(r'^$', direct_to_template,{"template":"homepage.html"}),
+    url(r'^$', {"template_name":"homepage.html"}),
     (r'^schedule/', include('schedule.urls')),
 
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
@@ -19,4 +19,3 @@ if settings.DEBUG:
          'django.views.static.serve',
          {'document_root': settings.MEDIA_ROOT, 'show_indexes': True}),
     )
-
