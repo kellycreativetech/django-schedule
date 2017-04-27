@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from django.contrib.contenttypes import generic
+from django.contrib.contenttypes import fields
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -343,7 +343,7 @@ class EventRelation(models.Model):
     event = models.ForeignKey(Event, verbose_name=_("event"))
     content_type = models.ForeignKey(ContentType)
     object_id = models.IntegerField()
-    content_object = generic.GenericForeignKey('content_type', 'object_id')
+    content_object = fields.GenericForeignKey('content_type', 'object_id')
     distinction = models.CharField(_("distinction"), max_length = 20, null=True)
 
     objects = EventRelationManager()
@@ -355,9 +355,6 @@ class EventRelation(models.Model):
 
     def __unicode__(self):
         return u'%s(%s)-%s' % (self.event.title, self.distinction, self.content_object)
-
-
-
 
 class Occurrence(models.Model):
     event = models.ForeignKey(Event, verbose_name=_("event"))
@@ -495,5 +492,3 @@ class Attendee(models.Model):
     class Meta:
         app_label = 'schedule'
         ordering = ['-wait_list', 'attending', 'created']
-
-
