@@ -1,6 +1,6 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
-from schedule.models import Event, Occurrence, Rule
+from schedule.models import Event, Occurrence, Rule, Attendee
 from schedule.fields import DateTimeField
 import datetime
 import time
@@ -29,10 +29,13 @@ class EventForm(SpanForm):
 
 
 class EventAdminForm(SpanForm):
-    end_recurring_period = DateTimeField(help_text=_("This date is ignored for one time only events."), required=False)
+    # end_recurring_period = DateTimeField(help_text=_("This date is ignored for one time only events."), required=False)
 
     class Meta:
         model = Event
+        from django import VERSION
+        if VERSION[1] in (7,8,9,10):
+            fields = "__all__"
 
 
 class OccurrenceForm(SpanForm):
@@ -52,3 +55,42 @@ class RuleForm(forms.ModelForm):
         except (ValueError, SyntaxError):
             raise forms.ValidationError(_("Params format looks invalid"))
         return self.cleaned_data["params"]
+
+
+class AttendeeForm(forms.Form):
+    name = forms.CharField()
+    phone = forms.CharField(required=False)
+    email = forms.EmailField(required=False)
+
+    use_stripe = False
+
+    def __init__(self, *args, **kwargs):
+        self.event = kwargs.pop('event', None)
+        self.occurrence = kwargs.pop('occurrence', None)
+        super(AttendeeForm, self).__init__(*args, **kwargs)
+
+        if self.event and self.event.rsvpcost:
+            self.use_stripe = True
+            self.fields['email'].required = True
+
+            self.fields['stripeEmail'] = self.fields['email']
+            self.fields['stripeEmail'].label = "Email"
+            self.fields['stripeEmail'].widget = forms.HiddenInput()
+            del self.fields['email']
+
+            self.fields['stripeToken'] = forms.CharField(widget=forms.HiddenInput)
+
+
+
+class ModifyAttendanceForm(forms.ModelForm):
+    attending = forms.TypedChoiceField(
+        coerce=lambda x: x == 'True',
+        choices=((False, 'Sorry, I need to cancel my RSVP for this event'), (True, 'I plan on attending this event')),
+        widget=forms.RadioSelect
+    )
+
+    class Meta:
+        model = Attendee
+        fields = [
+            'attending',
+        ]

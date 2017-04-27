@@ -1,5 +1,5 @@
-from django.conf.urls.defaults import *
-from django.views.generic.list_detail import object_list
+from django.conf.urls import patterns, url, include
+from django.views.generic.list import ListView
 from schedule.models import Calendar
 from schedule.feeds import UpcomingEventsFeed
 from schedule.feeds import CalendarICalendar
@@ -13,7 +13,7 @@ urlpatterns = patterns('',
 
 # urls for Calendars
 url(r'^calendar/$',
-    object_list,
+    ListView,
     name="schedule",
     kwargs={'queryset':Calendar.objects.all(), 'template_name':'schedule/calendar_list.html'}),
 
@@ -129,6 +129,10 @@ url(r'^occurrence/edit/(?P<event_id>\d+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d
     'schedule.views.edit_occurrence',
     name="edit_occurrence_by_date"),
 
+#urls for managing attendees
+url(r'^lookup_confirmation_code', 'schedule.views.lookup_confirmation_code', name='lookup_confirmation_code'),
+url(r'^modify_attendance/(?P<confirmation_code>[-\w\d]+)', 'schedule.views.modify_attendance', name='modify_attendance'),
+
 
 #feed urls
 # url(r'^feed/calendar/(.*)/$',
@@ -138,5 +142,5 @@ url(r'^occurrence/edit/(?P<event_id>\d+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d
 
 (r'^ical/calendar/(.*)/$', CalendarICalendar()),
 
- url(r'^$', object_list, info_dict, name='schedule'),
+ url(r'^$', ListView, info_dict, name='schedule'),
 )

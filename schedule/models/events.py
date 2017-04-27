@@ -8,10 +8,13 @@ from django.core.urlresolvers import reverse
 from django.template.defaultfilters import date
 from django.utils.translation import ugettext, ugettext_lazy as _
 import datetime
+import uuid
 from dateutil import rrule
 from schedule.models.rules import Rule
 from schedule.models.calendars import Calendar
 from schedule.utils import OccurrenceReplacer
+
+from forms_builder.forms.models import Form, FormEntry
 
 class EventManager(models.Manager):
 
@@ -27,6 +30,7 @@ class Event(models.Model):
     end = models.DateTimeField(_("end"),help_text=_("The end time must be later than the start time."))
     title = models.CharField(_("title"), max_length = 255)
     description = models.TextField(_("description"), null = True, blank = True)
+
     creator = models.ForeignKey(User, null = True, blank=True, verbose_name=_("creator"))
     created_on = models.DateTimeField(_("created on"), default = datetime.datetime.now)
     rule = models.ForeignKey(Rule, null = True, blank = True, verbose_name=_("rule"), help_text=_("Select '----' for a one time only event."))
@@ -34,11 +38,18 @@ class Event(models.Model):
     calendar = models.ForeignKey(Calendar, blank=True, null=True)
     objects = EventManager()
 
+    image = models.ImageField(upload_to="event_imgs", blank=True, null=True)
+    rsvp_requested = models.BooleanField(default=False, help_text="Check this box to include an RSVP form on this event")
+    max_attendees = models.IntegerField(default=None, blank=True, null=True, help_text="Leave blank for unlimited attendees.")
+    entrycost = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="Entry Cost", help_text=_("This is the cost to be paid at the door on the day of the event."))
+    rsvpcost = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, verbose_name="RSVP Cost", help_text=_("This is the cost to be paid online for the RSVP to be saved. If there is no RSVP Cost, a credit card form will not be displayed."))
+    rsvp_form = models.ForeignKey(Form, blank=True, null=True)
+
     class Meta:
         verbose_name = _('event')
         verbose_name_plural = _('events')
         app_label = 'schedule'
-	get_latest_by = 'start'
+        get_latest_by = 'start'
 
     def __unicode__(self):
         date_format = u'l, %s' % ugettext("DATE_FORMAT")
@@ -430,6 +441,11 @@ class Occurrence(models.Model):
             'second': self.start.second,
         })
 
+
+    @property
+    def soldout(self):
+        return self.event.max_attendees <= self.attendee_set.filter(attending=True, wait_list=False).count()
+
     def __unicode__(self):
         return ugettext("%(start)s to %(end)s") % {
             'start': self.start,
@@ -444,3 +460,40 @@ class Occurrence(models.Model):
 
     def __eq__(self, other):
         return self.event == other.event and self.original_start == other.original_start and self.original_end == other.original_end
+
+
+class Attendee(models.Model):
+    occurrence = models.ForeignKey(Occurrence)
+    confirmation_code = models.CharField(max_length=16, db_index=True)
+    stripe_transaction = models.CharField(max_length=64, db_index=True, blank=True, null=True)
+    payment_exception = models.BooleanField(default=False)
+    attending = models.BooleanField(default=True, db_index=True)
+    wait_list = models.BooleanField(default=False, db_index=True)
+    parent = models.ForeignKey('self', blank=True, null=True)
+
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+
+    name = models.CharField(max_length=64)
+    phone = models.CharField(max_length=64, blank=True, default="")
+    email = models.EmailField(max_length=64, blank=True, default="")
+
+    entry = models.ForeignKey(FormEntry, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.confirmation_code:
+            self.confirmation_code = uuid.uuid4().hex[:6].lower()
+        return super(Attendee, self).save(*args, **kwargs)
+
+    @property
+    def stripe_url(self):
+        return "https://dashboard.stripe.com/payments/%s" % self.stripe_transaction
+
+    def get_absolute_url(self):
+        return self.occurrence.get_absolute_url()
+
+    class Meta:
+        app_label = 'schedule'
+        ordering = ['-wait_list', 'attending', 'created']
+
+

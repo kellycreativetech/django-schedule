@@ -1,19 +1,51 @@
-from urllib import quote
-from django.shortcuts import render_to_response, get_object_or_404
-from django.views.generic.create_update import delete_object
-from django.http import HttpResponseRedirect, Http404, HttpResponse
-from django.template import RequestContext
-from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.views.generic.create_update import delete_object
+from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
+from django.forms.formsets import formset_factory
+from django.forms.models import modelformset_factory
+from django.http import HttpResponseRedirect, Http404, HttpResponse
+from django.shortcuts import render_to_response, get_object_or_404, redirect
+from django.template import RequestContext
+from django.views.generic.edit import DeleteView
+from urllib import quote
 import datetime
 
-from schedule.conf.settings import GET_EVENTS_FUNC, OCCURRENCE_CANCEL_REDIRECT
-from schedule.forms import EventForm, OccurrenceForm
+from schedule.conf.settings import (GET_EVENTS_FUNC, OCCURRENCE_CANCEL_REDIRECT,
+    USE_ATTENDEES, USE_MAILCHIMP, MAILCHIMP_KEY, MAILCHIMP_EVENTLIST,
+    MAILCHIMP_MARKETINGLIST)
+
+from schedule.forms import EventForm, OccurrenceForm, AttendeeForm, ModifyAttendanceForm
 from schedule.models import *
 from schedule.periods import weekday_names
 from schedule.utils import check_event_permissions, coerce_date_dict
+
+from django.core.mail import EmailMultiAlternatives, send_mail
+from django.template.loader import get_template
+from django.template import Context
+from django.conf import settings
+
+
+def _send_email(template, to, subject, context={}):
+
+    context = Context(context)
+
+    html_tmpl = get_template('%s.html' %  template)
+    html = html_tmpl.render(context)
+
+    txt_tmpl = get_template('%s.txt' %  template)
+    txt = txt_tmpl.render(context)
+
+    msg = EmailMultiAlternatives(
+        subject,
+        txt,
+        settings.DEFAULT_FROM_EMAIL,
+        [to] if isinstance(to, basestring) else to,
+    )
+    msg.attach_alternative(html, "text/html")
+    msg.send()
+
+
 
 def calendar(request, calendar_slug, template='schedule/calendar.html', extra_context=None):
     """
@@ -149,6 +181,174 @@ def occurrence(request, event_id,
         'back_url': back_url,
     }
     context.update(extra_context)
+
+    if USE_ATTENDEES:
+        form = AttendeeForm(request.POST or None, event=event, occurrence=occurrence, prefix='primary')
+        AttendeeFormset = formset_factory(AttendeeForm, extra=3)
+        formset = AttendeeFormset(request.POST or None, prefix="extra-guests")
+        mailing_list = request.POST.get('mailing_list', False)
+
+        attendee_count = occurrence.attendee_set.filter(attending=True, wait_list=False).count()
+        waitlist_count = occurrence.attendee_set.filter(attending=True, wait_list=True).count()
+
+        #boolean for if the event is full or not.
+        full = False
+        if event.max_attendees > 0:
+            full = (event.max_attendees <= attendee_count)
+
+        attendee = None
+
+        amount = int((event.rsvpcost or 0) * 100)
+
+        if form.is_valid() and formset.is_valid():
+            # Save Occurrence, in case it has not been persisted yet.
+            occurrence.save()
+
+            amount = int((event.rsvpcost or 0) * 100)
+
+            for f in formset:
+                if f.cleaned_data.get('name'):
+                    amount += int((event.rsvpcost or 0) * 100)
+
+            primary_email = form.cleaned_data.get('email', None) or form.cleaned_data['stripeEmail']
+
+            # Save Attendee
+            attendee = Attendee(
+                occurrence=occurrence,
+                name=form.cleaned_data['name'],
+                email=primary_email,
+                phone=form.cleaned_data['phone'],
+            )
+
+            if full:
+                attendee.wait_list = True
+
+            # Save, create confirmation code
+            attendee.save()
+
+            for f in formset:
+                # Save Attendee
+                if f.cleaned_data.get('name'):
+                    a = Attendee(
+                        occurrence=occurrence,
+                        name=f.cleaned_data['name'],
+                        email=f.cleaned_data.get('email', None),
+                        phone=f.cleaned_data.get('phone', None),
+                        parent=attendee,
+                        confirmation_code=attendee.confirmation_code,
+                    )
+
+                    if full:
+                        a.wait_list = True
+
+                    # Save, create confirmation code
+                    a.save()
+
+            if USE_MAILCHIMP:
+                import mailchimp
+                m = mailchimp.Mailchimp(MAILCHIMP_KEY)
+                MAILCHIMP_EVENTLIST
+                MAILCHIMP_MARKETINGLIST
+                # Add the attendee to this event
+                # Add any sub-attendees
+
+                try:
+                    m.lists.subscribe(MAILCHIMP_EVENTLIST, {
+                        'email': primary_email,
+                        'merge_vars': {
+                            'groupings': [
+                                {'name': '%s: %s' % (occurrence.event.title, occurrence.id) }
+                            ]
+                        }
+                    }, double_optin=False)
+                except mailchimp.ListAlreadySubscribedError:
+                    pass
+                except mailchimp.ValidationError:
+                    pass
+
+
+                if mailing_list:
+                    try:
+                        m.lists.subscribe(MAILCHIMP_MARKETINGLIST, {
+                            'email': primary_email,
+                        })
+                    except mailchimp.ListAlreadySubscribedError:
+                        pass
+                    except mailchimp.ValidationError:
+                        pass
+
+            if (attendee.wait_list == False) and amount:
+                import stripe
+                # Charge Credit Card
+                card = stripe.Token.retrieve(form.cleaned_data['stripeToken'])
+
+                try:
+                    charge_obj = stripe.Charge.create(
+                        amount=amount,
+                        currency="usd",
+                        card=card,
+                        description="RSVP %s, confirmation code %s" % (occurrence.title, attendee.confirmation_code),
+                        metadata={
+                            "id": attendee.id,
+                            "confirmation_code": attendee.confirmation_code,
+                        },
+                    )
+                    attendee.stripe_transaction = charge_obj.id
+                    attendee.save()
+                except stripe.CardError:
+                    messages.add_message(request, messages.WARNING,
+                                         "You've been added to the list, but there was a problem with you card and it was not processed. Please pay the full amount on the day of the event." % attendee.email)
+                    attendee.payment_exception = True
+                    attendee.save()
+
+
+            # Do some stuff? Email the individual a reciept? Show them their confirmation code.
+            if attendee.wait_list:
+                messages.add_message(request, messages.INFO, "Thanks, you've been added to the wait list")
+            else:
+                messages.add_message(request, messages.INFO, "Your confirmation code is %s. More info will be emailed to you at %s" % (attendee.confirmation_code, attendee.email))
+
+                email_context = {
+                    "event": event,
+                    "occurrence": occurrence,
+                    "amount": int(amount / 100),
+                    "attendee_count": attendee_count,
+                    "waitlist_count": waitlist_count,
+                    "full": full,
+                    "attendee": attendee,
+                }
+                # Email organizers
+                _send_email(
+                    "schedule/organizers_email",
+                    [m[1] for m in settings.MANAGERS],
+                    "New Attendee: %s" % occurrence.title,
+                    email_context
+                )
+
+                # Email attendee
+                _send_email(
+                    "schedule/attendee_email",
+                    attendee.email,
+                    "Confirmation: %s" % occurrence.title,
+                    email_context
+                )
+
+
+            # Return Redirect
+            return redirect(request.get_full_path())
+
+        context.update({
+            "form": form,
+            "formset": formset,
+            "amount": amount,
+            "attendee_count": attendee_count,
+            "waitlist_count": waitlist_count,
+            "full": full,
+            "attendee": attendee,
+            "stripe_public_key": getattr(settings, 'STRIPE_API_KEY', ''),
+        })
+
+
     return render_to_response(template_name, context, context_instance=RequestContext(request))
 
 
@@ -322,6 +522,60 @@ def delete_event(request, event_id, next=None, login_required=True, extra_contex
                          extra_context = extra_context,
                          login_required = login_required
                         )
+
+
+def lookup_confirmation_code(request):
+    try:
+        attendee = Attendee.objects.get(parent__isnull=True, confirmation_code__iexact=request.POST.get('confirmation_code', '').strip())
+        return redirect(reverse('modify_attendance', args=[attendee.confirmation_code]))
+    except Attendee.DoesNotExist:
+        messages.add_message(request, messages.WARNING, "Could not find confirmation code. Please try again.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+def modify_attendance(request, confirmation_code):
+    try:
+        attendee = Attendee.objects.get(parent__isnull=True, confirmation_code=confirmation_code)
+        form = ModifyAttendanceForm(request.POST or None, instance=attendee)
+        AttendeeFormset = modelformset_factory(Attendee, form=ModifyAttendanceForm, extra=0)
+        formset = AttendeeFormset(request.POST or None, queryset=attendee.attendee_set.all(), prefix="extra-guests")
+
+        if form.is_valid() and formset.is_valid():
+            attendee = form.save()
+            other_attendees = formset.save()
+
+            # Email organizers
+            _send_email(
+                "schedule/organizers_email_update",
+                [m[1] for m in settings.MANAGERS],
+                "Attendee Update: %s" % attendee.occurrence.title,
+                {
+                    "attendee": attendee,
+                    "other_attendees": other_attendees,
+                    "occurrence": attendee.occurrence,
+                    "event": attendee.occurrence.event,
+                }
+            )
+
+            messages.add_message(request, messages.SUCCESS, "Thank you.")
+            return redirect(reverse('modify_attendance', args=[attendee.confirmation_code]))
+
+        return render_to_response(
+            "schedule/modify_attendance.html",
+            {
+                "attendee": attendee,
+                "occurrence": attendee.occurrence,
+                "event": attendee.occurrence.event,
+                "form": form,
+                "formset": formset,
+            },
+            context_instance=RequestContext(request)
+        )
+
+    except Attendee.DoesNotExist:
+        messages.add_message(request, messages.WARNING, "Your confirmation code appears to be incorrect, please check it and try again.")
+        return redirect('/')
+
 
 def check_next_url(next):
     """

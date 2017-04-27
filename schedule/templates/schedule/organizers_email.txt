@@ -1,0 +1,11 @@
+{% load i18n %}
+
+New Registration for {{ occurrence.title }}
+{% blocktrans with occurrence.start|date:_("DATETIME_FORMAT") as start_date %}{{ start_date }}{% endblocktrans %}
+
+Name:					{{ attendee.name }}
+Confirmation Code:		{{ attendee.confirmation_code }}
+Email:					{{ attendee.email }}
+Phone:					{{ attendee.phone }}
+Registered:				{{ attendee.created }}
+{% if attendee.stripe_transaction %}Payment information		{{ attendee.stripe_url }}{% endif %}
