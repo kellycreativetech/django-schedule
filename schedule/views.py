@@ -10,6 +10,8 @@ from django.template import RequestContext
 from django.views.generic.edit import DeleteView
 from urllib import quote
 import datetime
+from django.shortcuts import render
+
 
 from schedule.conf.settings import (GET_EVENTS_FUNC, OCCURRENCE_CANCEL_REDIRECT,
     USE_ATTENDEES, USE_MAILCHIMP, MAILCHIMP_KEY, MAILCHIMP_EVENTLIST,
@@ -63,7 +65,7 @@ def calendar(request, calendar_slug, template='schedule/calendar.html', extra_co
     calendar = get_object_or_404(Calendar, slug=calendar_slug)
     context = {"calendar": calendar}
     context.update(extra_context)
-    return render_to_response(template, context, context_instance=RequestContext(request))
+    return render(request, template, context)
 
 def calendar_by_periods(request, calendar_slug=None, periods=None,
     template_name="schedule/calendar_by_period.html", extra_context=None):
@@ -125,7 +127,8 @@ def calendar_by_periods(request, calendar_slug=None, periods=None,
             'here':quote(request.get_full_path()),
         }
     context.update(extra_context)
-    return render_to_response(template_name, context, context_instance=RequestContext(request),)
+    return render(request, template_name, context)
+
 
 def event(request, event_id, template_name="schedule/event.html", extra_context=None):
     """
@@ -154,7 +157,7 @@ def event(request, event_id, template_name="schedule/event.html", extra_context=
         "back_url" : back_url,
     }
     context.update(extra_context)
-    return render_to_response(template_name, context, context_instance=RequestContext(request))
+    return render(request, template_name, context)
 
 def occurrence(request, event_id,
     template_name="schedule/occurrence.html", *args, **kwargs):
@@ -349,8 +352,7 @@ def occurrence(request, event_id,
         })
 
 
-    return render_to_response(template_name, context, context_instance=RequestContext(request))
-
+    return render(request, template_name, context)
 
 @check_event_permissions
 def edit_occurrence(request, event_id,
@@ -372,7 +374,7 @@ def edit_occurrence(request, event_id,
         'next':next,
     }
     context.update(extra_context)
-    return render_to_response(template_name, context, context_instance=RequestContext(request))
+    return render(request, template_name, context)
 
 
 @check_event_permissions
@@ -496,7 +498,7 @@ def create_or_edit_event(request, calendar_slug, event_id=None, next=None,
         "next":next
     }
     context.update(extra_context)
-    return render_to_response(template_name, context, context_instance=RequestContext(request))
+    return render(request, template_name, context)
 
 
 @check_event_permissions
