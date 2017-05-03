@@ -24,13 +24,13 @@ from schedule.utils import check_event_permissions, coerce_date_dict
 
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import get_template
-from django.template import Context
+# from django.template import Context
 from django.conf import settings
 
 
 def _send_email(template, to, subject, context={}):
 
-    context = Context(context)
+    context = context
 
     html_tmpl = get_template('%s.html' %  template)
     html = html_tmpl.render(context)
@@ -394,7 +394,7 @@ def cancel_occurrence(request, event_id,
             "next":next,
         }
         context.update(extra_context)
-        return render_to_response(template_name, context, context_instance=RequestContext(request))
+        return render(request, template_name, context)
     occurrence.cancel()
     return HttpResponseRedirect(next)
 
